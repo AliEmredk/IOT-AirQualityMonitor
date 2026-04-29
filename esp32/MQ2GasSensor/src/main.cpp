@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include <WiFi.h>
 #include <Adafruit_BME280.h>
+#include "config.h"
 
 const int MQ2_AO_PIN = 34;
 const int MQ2_DO_PIN = 25;
@@ -19,6 +21,9 @@ const int WARMUP_SECONDS = 120;
 const int BASELINE_SAMPLES = 50;
 const int DANGER_OFFSET = 500;
 
+unsigned long lastWiFiCheck = 0;
+const unsigned long WIFI_CHECK_INTERVAL = 5000;
+
 void beepBuzzer() {
   for (int i = 0; i < 100; i++) {
     digitalWrite(BUZZER_PIN, HIGH);
@@ -28,18 +33,68 @@ void beepBuzzer() {
   }
 }
 
+void onWiFiEvent(WiFiEvent_t event) {
+  switch (event) {
+    case ARDUINO_EVENT_WIFI_STA_CONNECTED:
+      Serial.println("WiFi connected to router.");
+      break;
+
+    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+      Serial.print("WiFi IP address: ");
+      Serial.println(WiFi.localIP());
+      break;
+
+    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+      Serial.println("WiFi disconnected.");
+      break;
+
+    default:
+      break;
+  }
+}
+
+bool connectToWiFi() {
+  Serial.print("Connecting to WiFi: ");
+  Serial.println(WIFI_SSID);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+  unsigned long startAttemptTime = millis();
+  const unsigned long WIFI_TIMEOUT = 10000;
+
+  while (WiFi.status() != WL_CONNECTED &&
+         millis() - startAttemptTime < WIFI_TIMEOUT) {
+    Serial.print(".");
+    delay(500);
+  }
+
+  Serial.println();
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("WiFi connection successful.");
+    return true;
+  } else {
+    Serial.println("WiFi connection failed.");
+    return false;
+  }
+}
+
 void setup() {
   Serial.begin(115200);
+  delay(1000);
 
   pinMode(MQ2_DO_PIN, INPUT);
   pinMode(BUZZER_PIN, OUTPUT);
+
+  WiFi.onEvent(onWiFiEvent);
+  connectToWiFi();
 
   // Start I2C for BME280
   Wire.begin(SDA_PIN, SCL_PIN);
 
   Serial.println("Starting BME280...");
 
-  // Try address 0x76 first
   if (!bme.begin(0x76)) {
     Serial.println("Could not find BME280 at 0x76, trying 0x77...");
 
@@ -90,6 +145,15 @@ void setup() {
 }
 
 void loop() {
+  if (millis() - lastWiFiCheck >= WIFI_CHECK_INTERVAL) {
+    lastWiFiCheck = millis();
+
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("WiFi not connected. Trying to reconnect...");
+      connectToWiFi();
+    }
+  }
+
   int analogValue = analogRead(MQ2_AO_PIN);
   int digitalValue = digitalRead(MQ2_DO_PIN);
 
@@ -98,6 +162,14 @@ void loop() {
   float pressure = bme.readPressure() / 100.0F;
 
   Serial.println("------------------------------");
+
+  Serial.print("WiFi status: ");
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.print("Connected | IP: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("Disconnected");
+  }
 
   Serial.print("Gas value: ");
   Serial.print(analogValue);
