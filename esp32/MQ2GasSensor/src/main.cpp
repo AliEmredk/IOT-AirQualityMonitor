@@ -2,7 +2,8 @@
 #include <Wire.h>
 #include <WiFi.h>
 #include <Adafruit_BME280.h>
-#include "config.h"
+#include <config.h>
+#include <PubSubClient.h>
 
 const int MQ2_AO_PIN = 34;
 const int MQ2_DO_PIN = 25;
@@ -23,6 +24,13 @@ const int DANGER_OFFSET = 500;
 
 unsigned long lastWiFiCheck = 0;
 const unsigned long WIFI_CHECK_INTERVAL = 5000;
+
+const char* mqtt_server = "mqtt.flespi.io";
+const int mqtt_port = 1883;
+const char* mqtt_user = MQTT_USER;
+
+WiFiClient espClient;
+PubSubClient client(espClient);
 
 void beepBuzzer() {
   for (int i = 0; i < 100; i++) {
@@ -80,6 +88,20 @@ bool connectToWiFi() {
   }
 }
 
+void connectToMQTT() {
+  while (!client.connected()) {
+    Serial.print("Connecting to Flespi MQTT...");
+
+    if (client.connect("ESP32Client", mqtt_user, "")) {
+      Serial.println("Connected!");
+    } else {
+      Serial.print("Connection failed! rc=");
+      Serial.println(client.state());
+      delay(2000);
+    }
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   delay(1000);
@@ -89,6 +111,8 @@ void setup() {
 
   WiFi.onEvent(onWiFiEvent);
   connectToWiFi();
+
+  client.setServer(mqtt_server, mqtt_port);
 
   // Start I2C for BME280
   Wire.begin(SDA_PIN, SCL_PIN);
@@ -154,6 +178,11 @@ void loop() {
     }
   }
 
+  if (!client.connected()) {
+    connectToMQTT();
+  }
+  client.loop();
+
   int analogValue = analogRead(MQ2_AO_PIN);
   int digitalValue = digitalRead(MQ2_DO_PIN);
 
@@ -198,9 +227,15 @@ void loop() {
   if (analogValue > dangerThreshold) {
     Serial.println("DANGEROUS GAS DETECTED!");
     beepBuzzer();
+
+    String payload = "{ \"gas\": " + String(analogValue) + ", \"alarm\": true }";
+    client.publish("esp32/gas", payload.c_str());
   } else {
     Serial.println("Air looks normal");
     digitalWrite(BUZZER_PIN, LOW);
+
+    String payload = "{ \"gas\": " + String(analogValue) + ", \"alarm\": false }";
+    client.publish("esp32/gas", payload.c_str());
   }
 
   delay(1000);
