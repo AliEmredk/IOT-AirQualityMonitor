@@ -2,7 +2,7 @@
 #include <Wire.h>
 #include <WiFi.h>
 #include <Adafruit_BME280.h>
-#include "config.h"
+#include <config.h>
 #include <PubSubClient.h>
 
 const int MQ2_AO_PIN = 34;
