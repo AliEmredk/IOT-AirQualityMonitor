@@ -3575,31 +3575,24 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\emre\\.nuget\\packages\\": {},
-    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+    "C:\\Users\\katja\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\emre\\Desktop\\4thSemesterIOT\\server\\DataAccess\\dataaccess.csproj",
+      "projectUniqueName": "C:\\Users\\katja\\Documents\\Skole\\ComputerScience\\IOT\\Exam\\IOT-AirQualityMonitor\\server\\DataAccess\\dataaccess.csproj",
       "projectName": "dataaccess",
-      "projectPath": "C:\\Users\\emre\\Desktop\\4thSemesterIOT\\server\\DataAccess\\dataaccess.csproj",
-      "packagesPath": "C:\\Users\\emre\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\emre\\Desktop\\4thSemesterIOT\\server\\DataAccess\\obj\\",
+      "projectPath": "C:\\Users\\katja\\Documents\\Skole\\ComputerScience\\IOT\\Exam\\IOT-AirQualityMonitor\\server\\DataAccess\\dataaccess.csproj",
+      "packagesPath": "C:\\Users\\katja\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\katja\\Documents\\Skole\\ComputerScience\\IOT\\Exam\\IOT-AirQualityMonitor\\server\\DataAccess\\obj\\",
       "projectStyle": "PackageReference",
-      "fallbackFolders": [
-        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-      ],
       "configFilePaths": [
-        "C:\\Users\\emre\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        "C:\\Users\\katja\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net10.0"
       ],
       "sources": {
-        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -3655,7 +3648,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.102/PortableRuntimeIdentifierGraph.json",
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.107/PortableRuntimeIdentifierGraph.json",
         "packagesToPrune": {
           "Microsoft.CSharp": "(,4.7.32767]",
           "Microsoft.VisualBasic": "(,10.4.32767]",
