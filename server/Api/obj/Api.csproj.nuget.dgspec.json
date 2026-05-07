@@ -54,9 +54,31 @@
         "net10.0": {
           "targetAlias": "net10.0",
           "dependencies": {
+            "DotNetEnv": {
+              "target": "Package",
+              "version": "[3.2.0, )"
+            },
             "Microsoft.AspNetCore.OpenApi": {
               "target": "Package",
               "version": "[10.0.2, )"
+            },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[10.0.7, )"
+            },
+            "Mqtt.Controllers": {
+              "target": "Package",
+              "version": "[0.1.0, )"
+            },
+            "Npgsql.EntityFrameworkCore.PostgreSQL": {
+              "target": "Package",
+              "version": "[10.0.1, )"
+            },
+            "StateleSSE.AspNetCore": {
+              "target": "Package",
+              "version": "[3.1.0, )"
             }
           },
           "imports": [
@@ -544,13 +566,13 @@
           "dependencies": {
             "Microsoft.EntityFrameworkCore": {
               "target": "Package",
-              "version": "[10.0.0, )"
+              "version": "[10.0.4, )"
             },
             "Microsoft.EntityFrameworkCore.Design": {
               "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
               "suppressParent": "All",
               "target": "Package",
-              "version": "[10.0.0, )"
+              "version": "[10.0.4, )"
             },
             "Npgsql.EntityFrameworkCore.PostgreSQL": {
               "target": "Package",
