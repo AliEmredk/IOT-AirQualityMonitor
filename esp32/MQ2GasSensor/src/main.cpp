@@ -32,6 +32,8 @@ const char* mqtt_user = MQTT_USER;
 
 const char* DEVICE_ID = "esp32-air-monitor-01";
 
+String mqttTopic;
+
 WiFiClient espClient;
 PubSubClient client(espClient);
 
@@ -95,7 +97,9 @@ void connectToMQTT() {
   while (!client.connected()) {
     Serial.print("Connecting to Flespi MQTT...");
 
-    if (client.connect("ESP32Client", mqtt_user, "")) {
+    String clientId = "esp32-air-monitor-01-" + String(random(0xffff), HEX);
+
+if (client.connect(clientId.c_str(), mqtt_user, NULL)) {
       Serial.println("Connected!");
     } else {
       Serial.print("Connection failed! rc=");
@@ -128,6 +132,7 @@ while (!getLocalTime(&timeinfo)) {
 Serial.println("Time synchronized!");
 
   client.setServer(mqtt_server, mqtt_port);
+  client.setBufferSize(1024);
 
   // Start I2C for BME280
   Wire.begin(SDA_PIN, SCL_PIN);
@@ -181,6 +186,13 @@ Serial.println("Time synchronized!");
   Serial.print("Danger threshold: ");
   Serial.println(dangerThreshold);
   Serial.println("System ready.");
+
+  mqttTopic = "air-monitor/";
+mqttTopic += DEVICE_ID;
+mqttTopic += "/telemetry";
+
+Serial.print("MQTT Topic: ");
+Serial.println(mqttTopic);
 }
 
 void handleBuzzer(bool isDanger) {
@@ -201,7 +213,7 @@ long getTimestamp() {
 
 String buildPayload(int analogValue, int digitalValue, float temperature, float humidity, float pressure, bool isDanger) {
   String payload = "{";
-  payload += "\"deviceId\":\"esp32-air-monitor-01\",";
+  payload += "\"deviceId\":\"" + String(DEVICE_ID) + "\",";
   payload += "\"timestamp\":" + String(getTimestamp()) + ",";
 
   payload += "\"gas\":{";
@@ -245,6 +257,9 @@ void loop() {
   }
   client.loop();
 
+  Serial.print("MQTT state: ");
+Serial.println(client.state());
+
   // Read sensors
   int analogValue = analogRead(MQ2_AO_PIN);
   int digitalValue = digitalRead(MQ2_DO_PIN);
@@ -275,7 +290,16 @@ void loop() {
     isDanger
   );
 
-  client.publish("air-monitor/esp32-air-monitor-01/telemetry", payload.c_str());
+  Serial.print("Payload length: ");
+  Serial.println(payload.length());
+
+  bool success = client.publish(mqttTopic.c_str(), payload.c_str());
+
+if (success) {
+  Serial.println("MQTT publish SUCCESS");
+} else {
+  Serial.println("MQTT publish FAILED");
+}
 
   delay(1000);
 }
