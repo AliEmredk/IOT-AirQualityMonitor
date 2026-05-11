@@ -1,4 +1,6 @@
-﻿namespace tests;
+﻿using Xunit;
+
+namespace tests;
 
 public class UnitTest1
 {
