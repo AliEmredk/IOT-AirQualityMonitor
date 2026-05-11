@@ -1,26 +1,27 @@
-using api.Services;
-using Mqtt.Controllers;
+using DefaultNamespace;
+using DotNetEnv;
+using Microsoft.EntityFrameworkCore;
+
+Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi();
+var connectionString =
+    Environment.GetEnvironmentVariable("CONN_STR")
+    ?? builder.Configuration.GetConnectionString("DefaultConnection");
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddControllers();
-builder.Services.AddMqttControllers();
 
-builder.Services.AddHostedService<MqttConnectHostedService>();
-
-// Remember to register your own services too
-//builder.Services.AddScoped<IWindmillTelemetryService, WindmillTelemetryService>();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
-
-app.UseHttpsRedirection();
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.MapControllers();
 
