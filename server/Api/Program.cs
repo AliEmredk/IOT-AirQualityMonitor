@@ -4,6 +4,7 @@ using DefaultNamespace;
 using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 using Mqtt.Controllers;
+using System.Text.Json.Serialization;
 
 Env.Load();
 
@@ -27,7 +28,11 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    });
 
 builder.Services.AddScoped<MqttTelemetryService>();
 
@@ -38,6 +43,8 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddMqttControllers();
 
 var app = builder.Build();
+
+app.UseDeveloperExceptionPage();
 
 app.UseCors("frontend");
 app.UseSwagger();
