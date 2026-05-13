@@ -16,6 +16,17 @@ var connectionString =
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("frontend", policy =>
+    {
+        policy
+            .AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 builder.Services.AddControllers();
 
 builder.Services.AddScoped<MqttTelemetryService>();
@@ -28,6 +39,7 @@ builder.Services.AddMqttControllers();
 
 var app = builder.Build();
 
+app.UseCors("frontend");
 app.UseSwagger();
 app.UseSwaggerUI();
 
