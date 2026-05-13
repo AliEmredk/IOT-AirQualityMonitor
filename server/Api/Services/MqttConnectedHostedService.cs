@@ -9,14 +9,19 @@ public class MqttConnectHostedService(
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        var host = Environment.GetEnvironmentVariable("MQTT_HOST");
+        var port = int.Parse(Environment.GetEnvironmentVariable("MQTT_PORT")!);
+        var user = Environment.GetEnvironmentVariable("MQTT_USER");
+        var password = Environment.GetEnvironmentVariable("MQTT_PASSWORD");
+
         await mqtt.ConnectAsync(
-            "mqtt.flespi.io",
-            1883,
-            "YOUR_FLESPI_TOKEN",
-            ""
+            host!,
+            port,
+            user!,
+            password
         );
 
-        logger.LogInformation("✅ MQTT connected to mqtt.flespi.io");
+        logger.LogInformation("✅ MQTT connected to {Host}", host);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
