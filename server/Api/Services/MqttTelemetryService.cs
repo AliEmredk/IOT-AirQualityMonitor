@@ -15,15 +15,8 @@ public class MqttTelemetryService
         this._db = db;
     }
 
-    public async Task HandleTelemetryAsync(string payload)
+    public async Task SaveTelemetryAsync(TelemetryDto dto)
     {
-        var dto = JsonSerializer.Deserialize<TelemetryDto>(payload);
-
-        if (dto == null)
-        {
-            return;
-        }
-        
         var device = await _db.Devices
             .FirstOrDefaultAsync(d => d.DeviceId == dto.DeviceId);
 
@@ -33,7 +26,7 @@ public class MqttTelemetryService
             {
                 DeviceId = dto.DeviceId,
             };
-            
+
             _db.Devices.Add(device);
             await _db.SaveChangesAsync();
         }
@@ -42,8 +35,7 @@ public class MqttTelemetryService
         {
             DeviceIdFk = device.Id,
             TimestampUnix = dto.Timestamp,
-            TimestampUtc = DateTimeOffset
-                .FromUnixTimeSeconds(dto.Timestamp),
+            TimestampUtc = DateTimeOffset.FromUnixTimeSeconds(dto.Timestamp),
 
             GasAnalogValue = dto.Gas.AnalogValue,
             GasDigitalValue = dto.Gas.DigitalValue,
@@ -57,9 +49,9 @@ public class MqttTelemetryService
 
             BuzzerActive = dto.Alarm.BuzzerActive
         };
-        
+
         _db.TelemetryReadings.Add(reading);
-        
+
         await _db.SaveChangesAsync();
     }
 }

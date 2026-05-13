@@ -1,6 +1,9 @@
+using api.Services;
+using Api.Services;
 using DefaultNamespace;
 using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
+using Mqtt.Controllers;
 
 Env.Load();
 
@@ -15,8 +18,13 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddControllers();
 
+builder.Services.AddScoped<MqttTelemetryService>();
+
+builder.Services.AddHostedService<MqttConnectHostedService>();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddMqttControllers();
 
 var app = builder.Build();
 
