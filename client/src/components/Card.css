@@ -1,0 +1,27 @@
+﻿.card {
+    background: #1e293b;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    border: 2px solid transparent;
+}
+
+.card-title {
+    font-size: 18px;
+    margin-bottom: 14px;
+    opacity: 0.8;
+}
+
+.card-value {
+    font-size: 32px;
+    font-weight: bold;
+    color: white;
+}
+
+.danger {
+    border: 2px solid red;
+}
+
+.danger-text {
+    color: red;
+}
