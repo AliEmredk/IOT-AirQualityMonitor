@@ -27,11 +27,11 @@ public class GasDto
 
 public class EnvironmentDto
 {
-    public float TemperatureC { get; set; }
+    public double TemperatureC { get; set; }
     
-    public float HumidityPercent { get; set; }
+    public double HumidityPercent { get; set; }
     
-    public float PressureHpa { get; set; }
+    public double PressureHpa { get; set; }
 }
 
 public class AlarmDto

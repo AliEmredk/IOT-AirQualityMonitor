@@ -6,4 +6,6 @@ const char* WIFI_PASSWORD = "YOUR_PASSWORD";
 
 #define MQTT_USER "YOUR_FLESPI_TOKEN"
 
+const char* NTFY_TOPIC = "YOUR_NTFY_TOPIC";
+
 #endif
