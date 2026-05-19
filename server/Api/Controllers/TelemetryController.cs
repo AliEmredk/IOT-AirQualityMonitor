@@ -36,4 +36,19 @@ public class TelemetryController(AppDbContext db) : ControllerBase
         
         return Ok(history);
     }
+    
+    //for ntfy notification
+    [HttpGet("{deviceId}/danger")]
+    public async Task<ActionResult<List<TelemetryReading>>> GetDangerHistory(string deviceId, int limit = 50)
+    {
+        var dangerHistory = await db.TelemetryReadings
+            .Include(t => t.Device)
+            .Where(t => t.Device.DeviceId == deviceId)
+            .Where(t => t.GasDangerDetected)
+            .OrderByDescending(t => t.TimestampUtc)
+            .Take(limit)
+            .ToListAsync();
+
+        return Ok(dangerHistory);
+    }
 }
