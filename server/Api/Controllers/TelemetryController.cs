@@ -50,5 +50,28 @@ public class TelemetryController(AppDbContext db) : ControllerBase
             .ToListAsync();
 
         return Ok(dangerHistory);
+
+    [HttpGet("{deviceId}/graph")]
+    public async Task<ActionResult<List<TelemetryReading>>> GetGraphData(
+        string deviceId,
+        string range = "hour")
+    {
+        var now = DateTimeOffset.UtcNow;
+
+        var from = range switch
+        {
+            "day" => now.AddDays(-1),
+            _ => now.AddHours(-1)
+        };
+
+        var data = await db.TelemetryReadings
+            .Include(t => t.Device)
+            .Where(t =>
+                t.Device.DeviceId == deviceId &&
+                t.TimestampUtc >= from)
+            .OrderBy(t => t.TimestampUtc)
+            .ToListAsync();
+        
+        return Ok(data);
     }
 }
