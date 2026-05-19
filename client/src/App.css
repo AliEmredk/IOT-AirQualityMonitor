@@ -30,3 +30,27 @@
     background: #0f172a;
     color: white;
 }
+
+.chart-section {
+    margin-top: 40px;
+    background: #1e293b;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.chart-header h2 {
+    margin: 0;
+}
+
+.chart-header select {
+    padding: 8px 12px;
+    border-radius: 8px;
+}
