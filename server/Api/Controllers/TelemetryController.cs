@@ -17,10 +17,10 @@ public class TelemetryController(AppDbContext db) : ControllerBase
             .Where(t => t.Device.DeviceId == deviceId)
             .OrderByDescending(t => t.TimestampUtc)
             .FirstOrDefaultAsync();
-        
-        if(latest == null)
+
+        if (latest == null)
             return NotFound();
-        
+
         return Ok(latest);
     }
 
@@ -33,8 +33,23 @@ public class TelemetryController(AppDbContext db) : ControllerBase
             .OrderByDescending(t => t.TimestampUtc)
             .Take(limit)
             .ToListAsync();
-        
+
         return Ok(history);
+    }
+
+    // for ntfy notification
+    [HttpGet("{deviceId}/danger")]
+    public async Task<ActionResult<List<TelemetryReading>>> GetDangerHistory(string deviceId, int limit = 50)
+    {
+        var dangerHistory = await db.TelemetryReadings
+            .Include(t => t.Device)
+            .Where(t => t.Device.DeviceId == deviceId)
+            .Where(t => t.GasDangerDetected)
+            .OrderByDescending(t => t.TimestampUtc)
+            .Take(limit)
+            .ToListAsync();
+
+        return Ok(dangerHistory);
     }
 
     [HttpGet("{deviceId}/graph")]
@@ -57,7 +72,7 @@ public class TelemetryController(AppDbContext db) : ControllerBase
                 t.TimestampUtc >= from)
             .OrderBy(t => t.TimestampUtc)
             .ToListAsync();
-        
+
         return Ok(data);
     }
 }
