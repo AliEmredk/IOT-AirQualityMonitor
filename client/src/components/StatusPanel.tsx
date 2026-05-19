@@ -1,4 +1,6 @@
-﻿type Props = {
+﻿import "./StatusPanel.css"
+
+type Props = {
     danger: boolean;
 };
 

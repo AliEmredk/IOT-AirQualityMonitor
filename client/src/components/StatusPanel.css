@@ -1,14 +1,16 @@
 ﻿.status-panel {
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 18px;
     
-    padding: 24px;
-    border-radius: 20px;
+    padding: 18px 24px;
+    border-radius: 18px;
     
-    margin-bottom: 24px;
+    margin-bottom: 28px;
     
-    color: white;
+    background: rgba(30, 41, 59, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
 }
 
 .status-panel.safe {
@@ -22,35 +24,45 @@
 }
 
 .status-light {
-    width: 90px;
-    height: 90px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
+    flex-shrink: 0;
 }
 
 .safe .status-light {
     background: #22c55e;
-    box-shadow: 0 0 30px #22c55e;
+    box-shadow: 0 0 10px #22c55e, 0 0 20px #22c55e;
 }
 
 .danger .status-light {
     background: #ef4444;
-    box-shadow: 0 0 40px #ef4444;
+    box-shadow: 0 0 12px #ef4444, 0 0 24px #ef4444;
     animation: blink 1s infinite;
+}
+
+.status-panel h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.status-panel p {
+    margin: 4px 0 0;
+    color: #94a3b8;
+    font-size: 14px;
 }
 
 @keyframes blink {
     0% {
         opacity: 1;
-        transform: scale(1);
     }
     
     50% {
-        opacity: 0.5;
-        transform: scale(1.08);
+        opacity: 0.35;
     }
     
     100% {
         opacity: 1;
-        transform: scale(1);
     }
 }

@@ -32,8 +32,6 @@ type TelemetryReading = {
 
 export default function App() {
   const API = import.meta.env.VITE_API_URL;
-  console.log("API:", API);
-  console.log("ENV:", import.meta.env);
   const [data, setData] = useState<TelemetryReading | null>(null);
   const [history, setHistory] = useState<TelemetryReading[]>([]);
   const [range, setRange] = useState<"hour" | "day">("hour");
@@ -143,7 +141,11 @@ export default function App() {
         
         <Card
           title="Last Updated"
-          value={new Date(data.timestampUtc).toLocaleString()}
+          value={new Date(data.timestampUtc).toLocaleString("en-GB", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+          })}
         />
       </div>
 
@@ -193,7 +195,7 @@ export default function App() {
             />
             <ReferenceLine 
               y={data.gasDangerThreshold}
-              stroke="ef4444"
+              stroke="#ef4444"
               strokeDasharray="5 5"
             />
           </LineChart>
