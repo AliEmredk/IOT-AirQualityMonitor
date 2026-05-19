@@ -33,7 +33,7 @@ public class TelemetryController(AppDbContext db) : ControllerBase
             .OrderByDescending(t => t.TimestampUtc)
             .Take(limit)
             .ToListAsync();
-        
+
         return Ok(history);
     }
 
