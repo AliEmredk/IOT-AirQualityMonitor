@@ -30,7 +30,7 @@ type TelemetryReading = {
 };
 
 export default function App() {
-  const API = "http://localhost:5137";
+  const API = import.meta.env.VITE_API_URL;
   console.log("API:", API);
   console.log("ENV:", import.meta.env);
   const [data, setData] = useState<TelemetryReading | null>(null);
