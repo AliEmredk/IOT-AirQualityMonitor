@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import Card from "./components/Card";
+import StatusPanel from "./components/StatusPanel";
 
 import {
   LineChart,
@@ -9,7 +10,7 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  CartesianGrid
+  CartesianGrid, ReferenceLine
 } from "recharts";
 
 type TelemetryReading = {
@@ -111,7 +112,9 @@ export default function App() {
     <div className="page">
       <h1 className="title">Gas Detection Dashboard</h1>
       
-      <div className="grid">
+      <StatusPanel danger={data.gasDangerDetected} />
+      
+      <div className="stats-grid">
         <Card
           title="Temperature"
           value={`${data.temperatureC.toFixed(1)} °C`}
@@ -133,30 +136,9 @@ export default function App() {
         />
         
         <Card
-          title="Gas Digital"
-          value={data.gasDigitalValue}
-        />
-        
-        <Card
-          title="Gas Baseline"
-          value={data.gasBaseline}
-        />
-        
-        <Card
-          title="Danger Threshold"
-          value={data.gasDangerThreshold}
-        />
-        
-        <Card
           title="Danger Detected"
           value={data.gasDangerDetected ? "YES" : "NO"}
           danger={data.gasDangerDetected}
-        />
-        
-        <Card
-          title="Buzzer"
-          value={data.buzzerActive ? "YES" : "NO"}
-          danger={data.buzzerActive}
         />
         
         <Card
@@ -195,11 +177,24 @@ export default function App() {
             <YAxis />
             <Tooltip
                 labelFormatter={(value) => new Date(value).toLocaleString()}
+                contentStyle={{
+                  backgroundColor: "#1e293b",
+                  border: "1px solid #334155",
+                  borderRadius: "12px",
+                  color: "white"
+                }}
             />
             <Line
                 type="monotone"
                 dataKey="gasAnalogValue"
+                stroke="#22c55e"
+                strokeWidth={3}
                 dot={false}
+            />
+            <ReferenceLine 
+              y={data.gasDangerThreshold}
+              stroke="ef4444"
+              strokeDasharray="5 5"
             />
           </LineChart>
         </ResponsiveContainer>
