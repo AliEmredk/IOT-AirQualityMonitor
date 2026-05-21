@@ -40,54 +40,40 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchTelemetry() {
-      try {
-        const response = await fetch(
-            `${API}/api/telemetry/${DEVICE_ID}/latest`
-        );
+    const connectionId = crypto.randomUUID();
+    const minutesBack = range === "day" ? 1440 : 60;
 
-        if (!response.ok) {
-          throw new Error(`Latest request failed: ${response.status}`);
-        }
+    // 1. Open actual SSE stream endpoint
+    const eventSource = new EventSource(
+        `${API}/THE_REAL_SSE_ENDPOINT?connectionId=${connectionId}`
+    );
 
-        const json = await response.json();
-        console.log("Latest:", json);
-        setData(json);
+    eventSource.onmessage = (event) => {
+      const response = JSON.parse(event.data);
+      console.log("SSE message:", response);
+    };
 
-      } catch (error) {
-        console.error("Failed to fetch telemetry: ", error);
-        setError("Could not connect to backend");
-      }
-    }
+    // 2. Subscribe to telemetry data
+    fetch(
+        `${API}/api/realtime/telemetry?connectionId=${connectionId}&deviceId=${DEVICE_ID}&minutesBack=${minutesBack}&maxPoints=1000`
+    )
+        .then(res => res.json())
+        .then(response => {
+          console.log("Initial realtime response:", response);
 
-    fetchTelemetry();
+          if (response.data && response.data.length > 0) {
+            const latest = response.data[response.data.length - 1];
+            setData(latest);
+            setHistory(response.data);
+          }
+        });
 
-    const interval = setInterval(fetchTelemetry, 2000);
+    eventSource.onerror = (error) => {
+      console.error("SSE error:", error);
+      setError("Could not connect to realtime updates");
+    };
 
-    return () => clearInterval(interval);
-  }, [API]);
-
-  useEffect(() => {
-    async function fetchHistory() {
-      try {
-        const response = await fetch(
-            `${API}/api/telemetry/${DEVICE_ID}/graph?range=${range}`
-        );
-
-        const json = await response.json();
-        console.log("History:", json);
-        setHistory(json);
-
-      } catch (error) {
-        console.error("Failed to fetch history: ", error);
-      }
-    }
-
-    fetchHistory();
-
-    const interval = setInterval(fetchHistory, 10000);
-
-    return () => clearInterval(interval);
+    return () => eventSource.close();
   }, [API, range]);
 
   if (error) {

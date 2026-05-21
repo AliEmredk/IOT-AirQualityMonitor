@@ -5,6 +5,7 @@ using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 using Mqtt.Controllers;
 using System.Text.Json.Serialization;
+using StateleSSE.AspNetCore;
 
 Env.Load();
 
@@ -33,6 +34,10 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
     });
+builder.Services.AddEfRealtime();
+builder.Services.AddInMemorySseBackplane();
+
+builder.Services.AddScoped<ITelemetryRealtimeService, TelemetryRealtimeService>();
 
 builder.Services.AddScoped<MqttTelemetryService>();
 
