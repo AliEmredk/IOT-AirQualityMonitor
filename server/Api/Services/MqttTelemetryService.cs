@@ -53,6 +53,8 @@ public class MqttTelemetryService
         _db.TelemetryReadings.Add(reading);
 
         await _db.SaveChangesAsync();
+        
+        Console.WriteLine($"Saved telemetry reading with id {reading.Id}");
     }
 
     public async Task<List<TelemetryGraphDto>> GetGraphDataAsync(string deviceId, string range)

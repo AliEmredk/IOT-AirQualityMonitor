@@ -1,10 +1,10 @@
-using api.Services;
 using Api.Services;
 using DefaultNamespace;
 using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 using Mqtt.Controllers;
 using System.Text.Json.Serialization;
+using StateleSSE.AspNetCore;
 
 Env.Load();
 
@@ -14,8 +14,14 @@ var connectionString =
     Environment.GetEnvironmentVariable("CONN_STR")
     ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connectionString));
+builder.Services.AddInMemorySseBackplane();
+builder.Services.AddEfRealtime();
+
+builder.Services.AddDbContext<AppDbContext>((sp, options) =>
+{
+    options.UseNpgsql(connectionString);
+    options.AddEfRealtimeInterceptor(sp);
+});
 
 builder.Services.AddCors(options =>
 {
@@ -33,6 +39,8 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
     });
+
+builder.Services.AddScoped<ITelemetryRealtimeService, TelemetryRealtimeService>();
 
 builder.Services.AddScoped<MqttTelemetryService>();
 
