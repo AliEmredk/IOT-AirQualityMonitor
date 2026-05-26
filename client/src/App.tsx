@@ -248,6 +248,122 @@ export default function App() {
                     </LineChart>
                 </ResponsiveContainer>
             </div>
+
+            <div className="chart-section">
+                <div className="chart-header">
+                    <h2>Temperature History</h2>
+
+                    <select
+                        value={range}
+                        onChange={(e) => setRange(e.target.value as "hour" | "day")}
+                    >
+                        <option value="hour">Last hour</option>
+                        <option value="day">Last 24 hours</option>
+                    </select>
+                </div>
+
+                <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={history}>
+                        <CartesianGrid strokeDasharray="3 3" />
+
+                        <XAxis
+                            dataKey="timestampUtc"
+                            tickFormatter={(value) =>
+                                new Date(value).toLocaleTimeString("en-GB", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                })
+                            }
+                            minTickGap={80}
+                            interval="preserveStartEnd"
+                        />
+
+                        <YAxis />
+
+                        <Tooltip
+                            labelFormatter={(value) => new Date(value).toLocaleString("en-GB")}
+                            contentStyle={{
+                                backgroundColor: "#1e293b",
+                                border: "1px solid #334155",
+                                borderRadius: "12px",
+                                color: "white",
+                            }}
+                        />
+
+                        <Line
+                            type="monotone"
+                            dataKey="temperatureC"
+                            stroke="#22c55e"
+                            strokeWidth={3}
+                            dot={false}
+                        />
+
+                        <ReferenceLine
+                            y={data.temperatureC}
+                            stroke="#ef4444"
+                            strokeDasharray="5 5"
+                        />
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
+
+            <div className="chart-section">
+                <div className="chart-header">
+                    <h2>Pressure History</h2>
+
+                    <select
+                        value={range}
+                        onChange={(e) => setRange(e.target.value as "hour" | "day")}
+                    >
+                        <option value="hour">Last hour</option>
+                        <option value="day">Last 24 hours</option>
+                    </select>
+                </div>
+
+                <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={history}>
+                        <CartesianGrid strokeDasharray="3 3" />
+
+                        <XAxis
+                            dataKey="timestampUtc"
+                            tickFormatter={(value) =>
+                                new Date(value).toLocaleTimeString("en-GB", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                })
+                            }
+                            minTickGap={80}
+                            interval="preserveStartEnd"
+                        />
+
+                        <YAxis />
+
+                        <Tooltip
+                            labelFormatter={(value) => new Date(value).toLocaleString("en-GB")}
+                            contentStyle={{
+                                backgroundColor: "#1e293b",
+                                border: "1px solid #334155",
+                                borderRadius: "12px",
+                                color: "white",
+                            }}
+                        />
+
+                        <Line
+                            type="monotone"
+                            dataKey="pressureHpa"
+                            stroke="#22c55e"
+                            strokeWidth={3}
+                            dot={false}
+                        />
+
+                        <ReferenceLine
+                            y={data.pressureHpa}
+                            stroke="#ef4444"
+                            strokeDasharray="5 5"
+                        />
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
         </div>
     );
 }
