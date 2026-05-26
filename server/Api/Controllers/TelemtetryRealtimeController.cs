@@ -26,6 +26,8 @@ public class TelemetryRealtimeController : RealtimeControllerBase
         [FromQuery] int minutesBack = 60,
         [FromQuery] int maxPoints = 1000)
     {
+        
+        Console.WriteLine($"Realtime endpoint called: connectionId={connectionId}, deviceId={deviceId}");
         return await _service.GetTelemetryAsync(
             connectionId,
             deviceId,

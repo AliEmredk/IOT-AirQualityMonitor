@@ -37,11 +37,19 @@ public class TelemetryRealtimeService : ITelemetryRealtimeService
         var group = $"telemetry:{deviceId}";
 
         await _backplane.Groups.AddToGroupAsync(connectionId, group);
+        
+        Console.WriteLine($"Subscribing connection {connectionId} to device {deviceId}");
 
         _realtimeManager.Subscribe<AppDbContext>(
             connectionId,
             group,
-            criteria: changes => changes.HasChanges<TelemetryReading>(),
+            criteria: changes =>
+            {
+                Console.WriteLine("EFRealtime detected SaveChanges");
+                var hasTelemetryChanges = changes.HasChanges<TelemetryReading>();
+                Console.WriteLine($"TelemetryReading changed: {hasTelemetryChanges}");
+                return hasTelemetryChanges;
+            },
             query: async ctx => await LoadTelemetryAsync(ctx, deviceId, minutesBack, maxPoints));
 
         var initialData = await LoadTelemetryAsync(_db, deviceId, minutesBack, maxPoints);

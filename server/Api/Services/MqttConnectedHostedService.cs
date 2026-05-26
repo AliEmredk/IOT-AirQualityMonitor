@@ -1,6 +1,6 @@
 ﻿using Mqtt.Controllers;
 
-namespace api.Services;
+namespace Api.Services;
 
 public class MqttConnectHostedService(
     IMqttClientService mqtt,
