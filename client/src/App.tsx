@@ -3,7 +3,7 @@ import "./App.css";
 import Card from "./components/Card";
 import StatusPanel from "./components/StatusPanel";
 import type { TelemetryReading } from "./types/telemetry";
-import { getLatestTelemetry, getGraphData } from "./api/telemetryApi";
+import { subscribeToRealtimeTelemetry } from "./api/telemetryApi";
 
 import {
     LineChart,
@@ -12,7 +12,8 @@ import {
     YAxis,
     Tooltip,
     ResponsiveContainer,
-    CartesianGrid, ReferenceLine,
+    CartesianGrid,
+    ReferenceLine,
 } from "recharts";
 
 const DEVICE_ID = "esp32-air-monitor-01";
@@ -25,87 +26,67 @@ export default function App() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        async function fetchTelemetry() {
-            try {
-                const latest = await getLatestTelemetry(DEVICE_ID);
-                setData(latest);
-                setError(null);
-            } catch (error) {
-                console.error("Failed to fetch telemetry:", error);
-                setError("Could not connect to backend");
-            }
-        }
-
-        fetchTelemetry();
-
-        const interval = setInterval(fetchTelemetry, 5000);
-        return () => clearInterval(interval);
-    }, []);
-
-    useEffect(() => {
-        async function fetchHistory() {
-            try {
-                const graph = await getGraphData(DEVICE_ID, range);
-                console.log("Graph history:", graph);
-                console.log("Graph length:", graph.length);
-                setHistory(graph);
-            } catch (error) {
-                console.error("Failed to fetch history:", error);
-            }
-        }
-
-        fetchHistory();
-
-        const interval = setInterval(fetchHistory, 10000);
-        return () => clearInterval(interval);
-    }, [range]);
-
-    useEffect(() => {
-        let hasSubscribed = false;
         const minutesBack = range === "day" ? 1440 : 60;
-
         const eventSource = new EventSource(`${API}/api/realtime/sse`);
 
-        eventSource.onmessage = async (event) => {
-            if (!event.data) return;
+        let isClosed = false;
 
-            const response = JSON.parse(event.data);
+        eventSource.addEventListener("connected", async (event) => {
+            try {
+                const response = JSON.parse(event.data);
+                const connectionId = response.connectionId;
 
-            if (response.connectionId && !hasSubscribed) {
-                hasSubscribed = true;
+                console.log("SSE connected. Connection ID:", connectionId);
 
-                const subscribeResponse = await fetch(
-                    `${API}/api/realtime/telemetry?connectionId=${response.connectionId}&deviceId=${DEVICE_ID}&minutesBack=${minutesBack}&maxPoints=1000`
+                const result = await subscribeToRealtimeTelemetry(
+                    connectionId,
+                    DEVICE_ID,
+                    minutesBack,
+                    1000
                 );
 
-                const initialHistory = await subscribeResponse.json();
+                console.log("Realtime subscription result:", result);
 
-                if (initialHistory.data) {
-                    setHistory(initialHistory.data);
+                const initialData = result.data;
 
-                    if (initialHistory.data.length > 0) {
-                        setData(initialHistory.data[initialHistory.data.length - 1]);
-                    }
+                if (!isClosed && initialData.length > 0) {
+                    setHistory(initialData);
+                    setData(initialData[initialData.length - 1]);
+                    setError(null);
                 }
-
-                return;
+            } catch (error) {
+                console.error("Failed to subscribe to realtime telemetry:", error);
+                setError("Could not connect to realtime telemetry");
             }
+        });
 
-            const latest = await getLatestTelemetry(DEVICE_ID);
-            const graph = await getGraphData(DEVICE_ID, range);
+        eventSource.addEventListener(`telemetry:${DEVICE_ID}`, (event) => {
+            try {
+                if (!event.data) return;
 
-            setData(latest);
-            setHistory(graph);
-        };
+                const updatedData = JSON.parse(event.data) as TelemetryReading[];
+
+                console.log("Telemetry SSE event received:", updatedData);
+
+                if (Array.isArray(updatedData) && updatedData.length > 0) {
+                    setHistory(updatedData);
+                    setData(updatedData[updatedData.length - 1]);
+                    setError(null);
+                }
+            } catch (error) {
+                console.error("Failed to handle telemetry SSE event:", error);
+            }
+        });
 
         eventSource.onerror = (error) => {
             console.error("SSE error:", error);
         };
 
         return () => {
+            isClosed = true;
             eventSource.close();
         };
-    }, [API, range]);
+    }, [range]);
 
     if (error) {
         return (
@@ -181,7 +162,7 @@ export default function App() {
                             interval="preserveStartEnd"
                         />
 
-                        <YAxis domain={["dataMin - 20", "dataMax + 20"]} />
+                        <YAxis />
 
                         <Tooltip
                             labelFormatter={(value) => new Date(value).toLocaleString("en-GB")}
@@ -197,8 +178,14 @@ export default function App() {
                             type="monotone"
                             dataKey="gasAnalogValue"
                             stroke="#22c55e"
-                            strokeWidth={5}
-                            dot={true}
+                            strokeWidth={3}
+                            dot={false}
+                        />
+
+                        <ReferenceLine
+                            y={data.gasDangerThreshold}
+                            stroke="#ef4444"
+                            strokeDasharray="5 5"
                         />
                     </LineChart>
                 </ResponsiveContainer>
@@ -233,7 +220,7 @@ export default function App() {
                             interval="preserveStartEnd"
                         />
 
-                        <YAxis domain={[30, 70]} />
+                        <YAxis />
 
                         <Tooltip
                             labelFormatter={(value) => new Date(value).toLocaleString("en-GB")}
@@ -249,122 +236,12 @@ export default function App() {
                             type="monotone"
                             dataKey="humidityPercent"
                             stroke="#38bdf8"
-                            strokeWidth={5}
-                            dot={true}
-                        />
-                    </LineChart>
-                </ResponsiveContainer>
-            </div>
-
-            <div className="chart-section">
-                <div className="chart-header">
-                    <h2>Temperature History</h2>
-
-                    <select
-                        value={range}
-                        onChange={(e) => setRange(e.target.value as "hour" | "day")}
-                    >
-                        <option value="hour">Last hour</option>
-                        <option value="day">Last 24 hours</option>
-                    </select>
-                </div>
-
-                <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={history}>
-                        <CartesianGrid strokeDasharray="3 3" />
-
-                        <XAxis
-                            dataKey="timestampUtc"
-                            tickFormatter={(value) =>
-                                new Date(value).toLocaleTimeString("en-GB", {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                })
-                            }
-                            minTickGap={80}
-                            interval="preserveStartEnd"
-                        />
-
-                        <YAxis />
-
-                        <Tooltip
-                            labelFormatter={(value) => new Date(value).toLocaleString("en-GB")}
-                            contentStyle={{
-                                backgroundColor: "#1e293b",
-                                border: "1px solid #334155",
-                                borderRadius: "12px",
-                                color: "white",
-                            }}
-                        />
-
-                        <Line
-                            type="monotone"
-                            dataKey="temperatureC"
-                            stroke="#38bdf8"
                             strokeWidth={3}
                             dot={false}
                         />
 
                         <ReferenceLine
-                            y={data.temperatureC}
-                            stroke="#ef4444"
-                            strokeDasharray="5 5"
-                        />
-                    </LineChart>
-                </ResponsiveContainer>
-            </div>
-
-            <div className="chart-section">
-                <div className="chart-header">
-                    <h2>Pressure History</h2>
-
-                    <select
-                        value={range}
-                        onChange={(e) => setRange(e.target.value as "hour" | "day")}
-                    >
-                        <option value="hour">Last hour</option>
-                        <option value="day">Last 24 hours</option>
-                    </select>
-                </div>
-
-                <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={history}>
-                        <CartesianGrid strokeDasharray="3 3" />
-
-                        <XAxis
-                            dataKey="timestampUtc"
-                            tickFormatter={(value) =>
-                                new Date(value).toLocaleTimeString("en-GB", {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                })
-                            }
-                            minTickGap={80}
-                            interval="preserveStartEnd"
-                        />
-
-                        <YAxis />
-
-                        <Tooltip
-                            labelFormatter={(value) => new Date(value).toLocaleString("en-GB")}
-                            contentStyle={{
-                                backgroundColor: "#1e293b",
-                                border: "1px solid #334155",
-                                borderRadius: "12px",
-                                color: "white",
-                            }}
-                        />
-
-                        <Line
-                            type="monotone"
-                            dataKey="pressureHpa"
-                            stroke="#38bdf8"
-                            strokeWidth={3}
-                            dot={false}
-                        />
-
-                        <ReferenceLine
-                            y={data.pressureHpa}
+                            y={data.humidityPercent}
                             stroke="#ef4444"
                             strokeDasharray="5 5"
                         />
