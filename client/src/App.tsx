@@ -12,8 +12,7 @@ import {
     YAxis,
     Tooltip,
     ResponsiveContainer,
-    CartesianGrid,
-    ReferenceLine,
+    CartesianGrid, ReferenceLine,
 } from "recharts";
 
 const DEVICE_ID = "esp32-air-monitor-01";
@@ -47,6 +46,8 @@ export default function App() {
         async function fetchHistory() {
             try {
                 const graph = await getGraphData(DEVICE_ID, range);
+                console.log("Graph history:", graph);
+                console.log("Graph length:", graph.length);
                 setHistory(graph);
             } catch (error) {
                 console.error("Failed to fetch history:", error);
@@ -180,7 +181,7 @@ export default function App() {
                             interval="preserveStartEnd"
                         />
 
-                        <YAxis />
+                        <YAxis domain={["dataMin - 20", "dataMax + 20"]} />
 
                         <Tooltip
                             labelFormatter={(value) => new Date(value).toLocaleString("en-GB")}
@@ -196,14 +197,8 @@ export default function App() {
                             type="monotone"
                             dataKey="gasAnalogValue"
                             stroke="#22c55e"
-                            strokeWidth={3}
-                            dot={false}
-                        />
-
-                        <ReferenceLine
-                            y={data.gasDangerThreshold}
-                            stroke="#ef4444"
-                            strokeDasharray="5 5"
+                            strokeWidth={5}
+                            dot={true}
                         />
                     </LineChart>
                 </ResponsiveContainer>
@@ -212,6 +207,58 @@ export default function App() {
             <div className="chart-section">
                 <div className="chart-header">
                     <h2>Humidity History</h2>
+
+                    <select
+                        value={range}
+                        onChange={(e) => setRange(e.target.value as "hour" | "day")}
+                    >
+                        <option value="hour">Last hour</option>
+                        <option value="day">Last 24 hours</option>
+                    </select>
+                </div>
+
+                <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={history}>
+                        <CartesianGrid strokeDasharray="3 3" />
+
+                        <XAxis
+                            dataKey="timestampUtc"
+                            tickFormatter={(value) =>
+                                new Date(value).toLocaleTimeString("en-GB", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                })
+                            }
+                            minTickGap={80}
+                            interval="preserveStartEnd"
+                        />
+
+                        <YAxis domain={[30, 70]} />
+
+                        <Tooltip
+                            labelFormatter={(value) => new Date(value).toLocaleString("en-GB")}
+                            contentStyle={{
+                                backgroundColor: "#1e293b",
+                                border: "1px solid #334155",
+                                borderRadius: "12px",
+                                color: "white",
+                            }}
+                        />
+
+                        <Line
+                            type="monotone"
+                            dataKey="humidityPercent"
+                            stroke="#38bdf8"
+                            strokeWidth={5}
+                            dot={true}
+                        />
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
+
+            <div className="chart-section">
+                <div className="chart-header">
+                    <h2>Temperature History</h2>
 
                     <select
                         value={range}
@@ -252,14 +299,72 @@ export default function App() {
 
                         <Line
                             type="monotone"
-                            dataKey="humidityPercent"
+                            dataKey="temperatureC"
                             stroke="#38bdf8"
                             strokeWidth={3}
                             dot={false}
                         />
 
                         <ReferenceLine
-                            y={data.humidityPercent}
+                            y={data.temperatureC}
+                            stroke="#ef4444"
+                            strokeDasharray="5 5"
+                        />
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
+
+            <div className="chart-section">
+                <div className="chart-header">
+                    <h2>Pressure History</h2>
+
+                    <select
+                        value={range}
+                        onChange={(e) => setRange(e.target.value as "hour" | "day")}
+                    >
+                        <option value="hour">Last hour</option>
+                        <option value="day">Last 24 hours</option>
+                    </select>
+                </div>
+
+                <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={history}>
+                        <CartesianGrid strokeDasharray="3 3" />
+
+                        <XAxis
+                            dataKey="timestampUtc"
+                            tickFormatter={(value) =>
+                                new Date(value).toLocaleTimeString("en-GB", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                })
+                            }
+                            minTickGap={80}
+                            interval="preserveStartEnd"
+                        />
+
+                        <YAxis />
+
+                        <Tooltip
+                            labelFormatter={(value) => new Date(value).toLocaleString("en-GB")}
+                            contentStyle={{
+                                backgroundColor: "#1e293b",
+                                border: "1px solid #334155",
+                                borderRadius: "12px",
+                                color: "white",
+                            }}
+                        />
+
+                        <Line
+                            type="monotone"
+                            dataKey="pressureHpa"
+                            stroke="#38bdf8"
+                            strokeWidth={3}
+                            dot={false}
+                        />
+
+                        <ReferenceLine
+                            y={data.pressureHpa}
                             stroke="#ef4444"
                             strokeDasharray="5 5"
                         />
