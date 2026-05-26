@@ -15,16 +15,18 @@ public class MqttTelemetryService
         this._db = db;
     }
 
-    public async Task SaveTelemetryAsync(TelemetryDto dto)
+    public async Task SaveTelemetryAsync(string deviceId, TelemetryDto dto)
     {
+        deviceId = deviceId.Trim();
+
         var device = await _db.Devices
-            .FirstOrDefaultAsync(d => d.DeviceId == dto.DeviceId);
+            .FirstOrDefaultAsync(d => d.DeviceId == deviceId);
 
         if (device == null)
         {
             device = new Device
             {
-                DeviceId = dto.DeviceId,
+                DeviceId = deviceId,
             };
 
             _db.Devices.Add(device);
@@ -51,9 +53,8 @@ public class MqttTelemetryService
         };
 
         _db.TelemetryReadings.Add(reading);
-
         await _db.SaveChangesAsync();
-        
+
         Console.WriteLine($"Saved telemetry reading with id {reading.Id}");
     }
 

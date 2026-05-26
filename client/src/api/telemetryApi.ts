@@ -24,3 +24,20 @@ export async function getGraphData(
 
     return response.json();
 }
+
+export async function subscribeToRealtimeTelemetry(
+    connectionId: string,
+    deviceId: string,
+    minutesBack: number,
+    maxPoints: number = 1000
+): Promise<{ group: string; data: TelemetryReading[] }> {
+    const response = await fetch(
+        `${API}/api/realtime/telemetry?connectionId=${connectionId}&deviceId=${deviceId}&minutesBack=${minutesBack}&maxPoints=${maxPoints}`
+    );
+
+    if (!response.ok) {
+        throw new Error(`Realtime subscribe failed: ${response.status}`);
+    }
+
+    return response.json();
+}

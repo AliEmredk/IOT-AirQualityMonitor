@@ -18,6 +18,6 @@ public class AirQualityMonitorMqttController(
             data.DeviceId
         );
 
-        await telemetryService.SaveTelemetryAsync(data);
+        await telemetryService.SaveTelemetryAsync(deviceId, data);
     }
 }
