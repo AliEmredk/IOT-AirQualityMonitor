@@ -220,7 +220,7 @@ export default function App() {
             />
             <YAxis />
             <Tooltip
-                labelFormatter={(value) => new Date(value).toLocaleString()}
+                labelFormatter={(value) => new Date(value).toLocaleString("en-GB")}
                 contentStyle={{
                   backgroundColor: "#1e293b",
                   border: "1px solid #334155",
