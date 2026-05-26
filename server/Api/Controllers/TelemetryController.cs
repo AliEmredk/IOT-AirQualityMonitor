@@ -1,4 +1,6 @@
-﻿using dataaccess.Entities;
+﻿using Api.Models;
+using Api.Services;
+using dataaccess.Entities;
 using DefaultNamespace;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -7,7 +9,7 @@ namespace Api.Controllers;
 
 [ApiController]
 [Route("api/telemetry")]
-public class TelemetryController(AppDbContext db) : ControllerBase
+public class TelemetryController(AppDbContext db, MqttTelemetryService telemetryService) : ControllerBase
 {
     [HttpGet("{deviceId}/latest")]
     public async Task<ActionResult<TelemetryReading>> GetLatest(string deviceId)
@@ -53,25 +55,11 @@ public class TelemetryController(AppDbContext db) : ControllerBase
     }
 
     [HttpGet("{deviceId}/graph")]
-    public async Task<ActionResult<List<TelemetryReading>>> GetGraphData(
+    public async Task<ActionResult<List<TelemetryGraphDto>>> GetGraphData(
         string deviceId,
         string range = "hour")
     {
-        var now = DateTimeOffset.UtcNow;
-
-        var from = range switch
-        {
-            "day" => now.AddDays(-1),
-            _ => now.AddHours(-1)
-        };
-
-        var data = await db.TelemetryReadings
-            .Include(t => t.Device)
-            .Where(t =>
-                t.Device.DeviceId == deviceId &&
-                t.TimestampUtc >= from)
-            .OrderBy(t => t.TimestampUtc)
-            .ToListAsync();
+        var data = await telemetryService.GetGraphDataAsync(deviceId, range);
 
         return Ok(data);
     }
