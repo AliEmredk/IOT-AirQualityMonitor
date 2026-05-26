@@ -3,7 +3,7 @@ import "./App.css";
 import Card from "./components/Card";
 import StatusPanel from "./components/StatusPanel";
 import type { TelemetryReading } from "./types/telemetry";
-import { getLatestTelemetry, getGraphData } from "./api/telemetryApi";
+import { subscribeToRealtimeTelemetry } from "./api/telemetryApi";
 
 import {
     LineChart,
@@ -26,85 +26,67 @@ export default function App() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        async function fetchTelemetry() {
-            try {
-                const latest = await getLatestTelemetry(DEVICE_ID);
-                setData(latest);
-                setError(null);
-            } catch (error) {
-                console.error("Failed to fetch telemetry:", error);
-                setError("Could not connect to backend");
-            }
-        }
-
-        fetchTelemetry();
-
-        const interval = setInterval(fetchTelemetry, 5000);
-        return () => clearInterval(interval);
-    }, []);
-
-    useEffect(() => {
-        async function fetchHistory() {
-            try {
-                const graph = await getGraphData(DEVICE_ID, range);
-                setHistory(graph);
-            } catch (error) {
-                console.error("Failed to fetch history:", error);
-            }
-        }
-
-        fetchHistory();
-
-        const interval = setInterval(fetchHistory, 10000);
-        return () => clearInterval(interval);
-    }, [range]);
-
-    useEffect(() => {
-        let hasSubscribed = false;
         const minutesBack = range === "day" ? 1440 : 60;
-
         const eventSource = new EventSource(`${API}/api/realtime/sse`);
 
-        eventSource.onmessage = async (event) => {
-            if (!event.data) return;
+        let isClosed = false;
 
-            const response = JSON.parse(event.data);
+        eventSource.addEventListener("connected", async (event) => {
+            try {
+                const response = JSON.parse(event.data);
+                const connectionId = response.connectionId;
 
-            if (response.connectionId && !hasSubscribed) {
-                hasSubscribed = true;
+                console.log("SSE connected. Connection ID:", connectionId);
 
-                const subscribeResponse = await fetch(
-                    `${API}/api/realtime/telemetry?connectionId=${response.connectionId}&deviceId=${DEVICE_ID}&minutesBack=${minutesBack}&maxPoints=1000`
+                const result = await subscribeToRealtimeTelemetry(
+                    connectionId,
+                    DEVICE_ID,
+                    minutesBack,
+                    1000
                 );
 
-                const initialHistory = await subscribeResponse.json();
+                console.log("Realtime subscription result:", result);
 
-                if (initialHistory.data) {
-                    setHistory(initialHistory.data);
+                const initialData = result.data;
 
-                    if (initialHistory.data.length > 0) {
-                        setData(initialHistory.data[initialHistory.data.length - 1]);
-                    }
+                if (!isClosed && initialData.length > 0) {
+                    setHistory(initialData);
+                    setData(initialData[initialData.length - 1]);
+                    setError(null);
                 }
-
-                return;
+            } catch (error) {
+                console.error("Failed to subscribe to realtime telemetry:", error);
+                setError("Could not connect to realtime telemetry");
             }
+        });
 
-            const latest = await getLatestTelemetry(DEVICE_ID);
-            const graph = await getGraphData(DEVICE_ID, range);
+        eventSource.addEventListener(`telemetry:${DEVICE_ID}`, (event) => {
+            try {
+                if (!event.data) return;
 
-            setData(latest);
-            setHistory(graph);
-        };
+                const updatedData = JSON.parse(event.data) as TelemetryReading[];
+
+                console.log("Telemetry SSE event received:", updatedData);
+
+                if (Array.isArray(updatedData) && updatedData.length > 0) {
+                    setHistory(updatedData);
+                    setData(updatedData[updatedData.length - 1]);
+                    setError(null);
+                }
+            } catch (error) {
+                console.error("Failed to handle telemetry SSE event:", error);
+            }
+        });
 
         eventSource.onerror = (error) => {
             console.error("SSE error:", error);
         };
 
         return () => {
+            isClosed = true;
             eventSource.close();
         };
-    }, [API, range]);
+    }, [range]);
 
     if (error) {
         return (
