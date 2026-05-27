@@ -10,8 +10,13 @@ public:
 
 private:
     int _pin;
+    unsigned long _lastMelodyTime;
 
-    void beep();
+    static const int BUZZER_CHANNEL = 0;
+    static const int BUZZER_RESOLUTION = 8;
+
+    void playTone(int frequency, int durationMs);
+    void dangerMelody();
 };
 
 #endif

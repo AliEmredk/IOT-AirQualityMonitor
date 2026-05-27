@@ -5,7 +5,7 @@ AppWiFi::AppWiFi(const char* ssid, const char* password) {
     _password = password;
     _lastWiFiCheck = 0;
 }
-
+    
 void AppWiFi::begin() {
     WiFi.onEvent(onWiFiEvent);
     connect();

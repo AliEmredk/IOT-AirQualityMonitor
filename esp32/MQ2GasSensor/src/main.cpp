@@ -32,6 +32,9 @@ PayloadBuilder payloadBuilder(DEVICE_ID);
 NtfyService ntfy(NTFY_TOPIC);
 bool dangerNotificationSent = false;
 
+unsigned long lastTelemetryPublish = 0;
+const unsigned long TELEMETRY_INTERVAL = 2000; // 3 seconds
+
 void setup() {
     Serial.begin(115200);
     delay(1000);
@@ -64,9 +67,6 @@ void loop() {
 
     mqttService.loop();
 
-    Serial.print("MQTT state: ");
-    Serial.println(mqttService.state());
-
     int analogValue = gasSensor.readAnalog();
     int digitalValue = gasSensor.readDigital();
 
@@ -77,65 +77,69 @@ void loop() {
     bool isDanger = gasSensor.isDanger(analogValue);
 
     if (isDanger && !dangerNotificationSent) {
-    String message = "Gas value: " + String(analogValue) +
-                     "\nThreshold: " + String(gasSensor.getDangerThreshold()) +
-                     "\nDevice: " + String(DEVICE_ID);
+        String message = "Gas value: " + String(analogValue) +
+                         "\nThreshold: " + String(gasSensor.getDangerThreshold()) +
+                         "\nDevice: " + String(DEVICE_ID);
 
-    ntfy.sendNotification(
-        "Dangerous Gas Detected!",
-        message.c_str(),
-        "urgent",
-        "warning"
-    );
+        ntfy.sendNotification(
+            "Dangerous Gas Detected!",
+            message.c_str(),
+            "urgent",
+            "warning"
+        );
 
-    dangerNotificationSent = true;
-}
+        dangerNotificationSent = true;
+    }
 
-if (!isDanger && dangerNotificationSent) {
-    ntfy.sendNotification(
-        "Air Quality Normal",
-        "Gas level is back below the danger threshold.",
-        "default",
-        "white_check_mark"
-    );
+    if (!isDanger && dangerNotificationSent) {
+        ntfy.sendNotification(
+            "Air Quality Normal",
+            "Gas level is back below the danger threshold.",
+            "default",
+            "white_check_mark"
+        );
 
-    dangerNotificationSent = false;
-}
-
-    Serial.println("------------------------------");
-    Serial.print("Gas: ");
-    Serial.println(analogValue);
-    Serial.print("Temp: ");
-    Serial.println(temperature);
-    Serial.print("Humidity: ");
-    Serial.println(humidity);
-    Serial.print("Pressure: ");
-    Serial.println(pressure);
+        dangerNotificationSent = false;
+    }
 
     buzzer.handle(isDanger);
 
-    String payload = payloadBuilder.buildTelemetryPayload(
-        timeService.getTimestamp(),
-        analogValue,
-        digitalValue,
-        gasSensor.getBaseline(),
-        gasSensor.getDangerThreshold(),
-        temperature,
-        humidity,
-        pressure,
-        isDanger
-    );
+    if (millis() - lastTelemetryPublish >= TELEMETRY_INTERVAL) {
+        lastTelemetryPublish = millis();
 
-    Serial.print("Payload length: ");
-    Serial.println(payload.length());
+        Serial.println("------------------------------");
+        Serial.print("Gas: ");
+        Serial.println(analogValue);
+        Serial.print("Temp: ");
+        Serial.println(temperature);
+        Serial.print("Humidity: ");
+        Serial.println(humidity);
+        Serial.print("Pressure: ");
+        Serial.println(pressure);
 
-    bool success = mqttService.publish(mqttTopic, payload);
+        String payload = payloadBuilder.buildTelemetryPayload(
+            timeService.getTimestamp(),
+            analogValue,
+            digitalValue,
+            gasSensor.getBaseline(),
+            gasSensor.getDangerThreshold(),
+            temperature,
+            humidity,
+            pressure,
+            isDanger
+        );
 
-    if (success) {
-        Serial.println("MQTT publish SUCCESS");
-    } else {
-        Serial.println("MQTT publish FAILED");
+        Serial.print("Payload length: ");
+        Serial.println(payload.length());
+
+        bool success = mqttService.publish(mqttTopic, payload);
+
+        if (success) {
+            Serial.println("MQTT publish SUCCESS");
+        } else {
+            Serial.println("MQTT publish FAILED");
+        }
     }
 
-    delay(1000);
+    delay(10);
 }
