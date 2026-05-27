@@ -27,8 +27,8 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("frontend", policy =>
     {
-        policy
-            .AllowAnyOrigin()
+        policy.WithOrigins("https://airmonitoring.fly.dev/",
+                "http://localhost:5137")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
