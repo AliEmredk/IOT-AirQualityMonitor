@@ -1,0 +1,27 @@
+﻿# .NET build
+**/bin
+**/obj
+
+# IDE
+**/.vs
+**/.idea
+**/.vscode
+
+# Node
+client/node_modules
+client/dist
+client/.vite
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+.env*
+
+# Development config only
+appsettings.Development.json
