@@ -78,6 +78,11 @@ If dangerous gas levels exceed a predefined threshold, the system activates a bu
 * client – React frontend dashboard and charts
 * esp32 – ESP32 firmware and sensor integration
 
+## Hardware Wiring
+The diagram below shows how the ESP32 is connected to the MQ-2 gas sensor, BME280 sensor, buzzer, and breadboard.
+
+![ESP32 wiring diagram](docs/images/esp32-wiring-diagram.png)
+
 ## Development Process
 
 The project was developed as a full-stack IoT system combining embedded programming, backend development, database management, and frontend visualization.
