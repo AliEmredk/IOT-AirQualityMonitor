@@ -1,306 +1,145 @@
 #include <Arduino.h>
-#include <Wire.h>
-#include <WiFi.h>
-#include <Adafruit_BME280.h>
-#include <config.h>
-#include <PubSubClient.h>
-#include <time.h>
 
-const int MQ2_AO_PIN = 34;
-const int MQ2_DO_PIN = 25;
-const int BUZZER_PIN = 26;
+#include "config.h"
+#include "pins.h"
 
-// BME280 I2C pins
-const int SDA_PIN = 21;
-const int SCL_PIN = 22;
-
-Adafruit_BME280 bme;
-
-int baseline = 0;
-int dangerThreshold = 0;
-
-const int WARMUP_SECONDS = 120;
-const int BASELINE_SAMPLES = 50;
-const int DANGER_OFFSET = 500;
-
-unsigned long lastWiFiCheck = 0;
-const unsigned long WIFI_CHECK_INTERVAL = 5000;
-
-const char* mqtt_server = "mqtt.flespi.io";
-const int mqtt_port = 1883;
-const char* mqtt_user = MQTT_USER;
+#include "AppWiFi.h"
+#include "MqttService.h"
+#include "Bme280Sensor.h"
+#include "GasSensor.h"
+#include "Buzzer.h"
+#include "TimeService.h"
+#include "PayloadBuilder.h"
+#include "NtfyService.h"
 
 const char* DEVICE_ID = "esp32-air-monitor-01";
 
+const char* MQTT_SERVER = "mqtt.flespi.io";
+const int MQTT_PORT = 1883;
+
 String mqttTopic;
 
-WiFiClient espClient;
-PubSubClient client(espClient);
+AppWiFi appWiFi(WIFI_SSID, WIFI_PASSWORD);
+MqttService mqttService(MQTT_SERVER, MQTT_PORT, MQTT_USER);
 
-void beepBuzzer() {
-  for (int i = 0; i < 100; i++) {
-    digitalWrite(BUZZER_PIN, HIGH);
-    delayMicroseconds(500);
-    digitalWrite(BUZZER_PIN, LOW);
-    delayMicroseconds(500);
-  }
-}
+Bme280Sensor bmeSensor(SDA_PIN, SCL_PIN);
+GasSensor gasSensor(MQ2_AO_PIN, MQ2_DO_PIN);
+Buzzer buzzer(BUZZER_PIN);
 
-void onWiFiEvent(WiFiEvent_t event) {
-  switch (event) {
-    case ARDUINO_EVENT_WIFI_STA_CONNECTED:
-      Serial.println("WiFi connected to router.");
-      break;
+TimeService timeService;
+PayloadBuilder payloadBuilder(DEVICE_ID);
 
-    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-      Serial.print("WiFi IP address: ");
-      Serial.println(WiFi.localIP());
-      break;
+NtfyService ntfy(NTFY_TOPIC);
+bool dangerNotificationSent = false;
 
-    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-      Serial.println("WiFi disconnected.");
-      break;
-
-    default:
-      break;
-  }
-}
-
-bool connectToWiFi() {
-  Serial.print("Connecting to WiFi: ");
-  Serial.println(WIFI_SSID);
-
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-
-  unsigned long startAttemptTime = millis();
-  const unsigned long WIFI_TIMEOUT = 10000;
-
-  while (WiFi.status() != WL_CONNECTED &&
-         millis() - startAttemptTime < WIFI_TIMEOUT) {
-    Serial.print(".");
-    delay(500);
-  }
-
-  Serial.println();
-
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("WiFi connection successful.");
-    return true;
-  } else {
-    Serial.println("WiFi connection failed.");
-    return false;
-  }
-}
-
-void connectToMQTT() {
-  while (!client.connected()) {
-    Serial.print("Connecting to Flespi MQTT...");
-
-    String clientId = "esp32-air-monitor-01-" + String(random(0xffff), HEX);
-
-if (client.connect(clientId.c_str(), mqtt_user, NULL)) {
-      Serial.println("Connected!");
-    } else {
-      Serial.print("Connection failed! rc=");
-      Serial.println(client.state());
-      delay(2000);
-    }
-  }
-}
+unsigned long lastTelemetryPublish = 0;
+const unsigned long TELEMETRY_INTERVAL = 2000; // 3 seconds
 
 void setup() {
-  Serial.begin(115200);
-  delay(1000);
-
-  pinMode(MQ2_DO_PIN, INPUT);
-  pinMode(BUZZER_PIN, OUTPUT);
-
-  WiFi.onEvent(onWiFiEvent);
-  connectToWiFi();
-
-  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
-
-Serial.println("Syncing time with NTP...");
-
-struct tm timeinfo;
-while (!getLocalTime(&timeinfo)) {
-  Serial.println("Waiting for NTP time...");
-  delay(1000);
-}
-
-Serial.println("Time synchronized!");
-
-  client.setServer(mqtt_server, mqtt_port);
-  client.setBufferSize(1024);
-
-  // Start I2C for BME280
-  Wire.begin(SDA_PIN, SCL_PIN);
-
-  Serial.println("Starting BME280...");
-
-  if (!bme.begin(0x76)) {
-    Serial.println("Could not find BME280 at 0x76, trying 0x77...");
-
-    if (!bme.begin(0x77)) {
-      Serial.println("Could not find BME280 sensor!");
-      Serial.println("Check wiring: VCC, GND, SDA=21, SCL=22");
-    } else {
-      Serial.println("BME280 found at 0x77");
-    }
-  } else {
-    Serial.println("BME280 found at 0x76");
-  }
-
-  Serial.println("MQ-2 Gas Sensor Starting...");
-  Serial.println("Warming up sensor...");
-
-  for (int i = WARMUP_SECONDS; i > 0; i--) {
-    Serial.print("Warm-up remaining: ");
-    Serial.print(i);
-    Serial.println(" seconds");
+    Serial.begin(115200);
     delay(1000);
-  }
 
-  Serial.println("Measuring clean air baseline...");
-  long total = 0;
+    gasSensor.begin();
+    buzzer.begin();
 
-  for (int i = 0; i < BASELINE_SAMPLES; i++) {
-    int value = analogRead(MQ2_AO_PIN);
-    total += value;
+    appWiFi.begin();
 
-    Serial.print("Baseline sample ");
-    Serial.print(i + 1);
-    Serial.print(": ");
-    Serial.println(value);
+    timeService.syncTime();
 
-    delay(200);
-  }
+    mqttService.begin();
 
-  baseline = total / BASELINE_SAMPLES;
-  dangerThreshold = baseline + DANGER_OFFSET;
+    bmeSensor.begin();
 
-  Serial.println("Calibration finished.");
-  Serial.print("Clean air baseline: ");
-  Serial.println(baseline);
-  Serial.print("Danger threshold: ");
-  Serial.println(dangerThreshold);
-  Serial.println("System ready.");
+    gasSensor.calibrate();
 
-  mqttTopic = "air-monitor/";
-mqttTopic += DEVICE_ID;
-mqttTopic += "/telemetry";
+    Serial.println("System ready.");
 
-Serial.print("MQTT Topic: ");
-Serial.println(mqttTopic);
+    mqttTopic = "air-monitor/";
+    mqttTopic += DEVICE_ID;
+    mqttTopic += "/telemetry";
+
+    Serial.print("MQTT Topic: ");
+    Serial.println(mqttTopic);
 }
-
-void handleBuzzer(bool isDanger) {
-  if (isDanger) {
-    Serial.println("DANGEROUS GAS DETECTED!");
-    beepBuzzer();
-  } else {
-    Serial.println("Air looks normal");
-    digitalWrite(BUZZER_PIN, LOW);
-  }
-}
-
-long getTimestamp() {
-  time_t now;
-  time(&now);
-  return now; // seconds since 1970 (UTC)
-}
-
-String buildPayload(int analogValue, int digitalValue, float temperature, float humidity, float pressure, bool isDanger) {
-  String payload = "{";
-  payload += "\"deviceId\":\"" + String(DEVICE_ID) + "\",";
-  payload += "\"timestamp\":" + String(getTimestamp()) + ",";
-
-  payload += "\"gas\":{";
-  payload += "\"analogValue\":" + String(analogValue) + ",";
-  payload += "\"digitalValue\":" + String(digitalValue) + ",";
-  payload += "\"baseline\":" + String(baseline) + ",";
-  payload += "\"dangerThreshold\":" + String(dangerThreshold) + ",";
-  payload += "\"dangerDetected\":" + String(isDanger ? "true" : "false");
-  payload += "},";
-
-  payload += "\"environment\":{";
-  payload += "\"temperatureC\":" + String(temperature) + ",";
-  payload += "\"humidityPercent\":" + String(humidity) + ",";
-  payload += "\"pressureHpa\":" + String(pressure);
-  payload += "},";
-
-  payload += "\"alarm\":{";
-  payload += "\"buzzerActive\":" + String(isDanger ? "true" : "false");
-  payload += "}";
-
-  payload += "}";
-  return payload;
-}
-
-
 
 void loop() {
-  // WiFi reconnect
-  if (millis() - lastWiFiCheck >= WIFI_CHECK_INTERVAL) {
-    lastWiFiCheck = millis();
+    appWiFi.checkReconnect();
 
-    if (WiFi.status() != WL_CONNECTED) {
-      Serial.println("WiFi not connected. Trying to reconnect...");
-      connectToWiFi();
+    mqttService.loop();
+
+    int analogValue = gasSensor.readAnalog();
+    int digitalValue = gasSensor.readDigital();
+
+    float temperature = bmeSensor.readTemperature();
+    float humidity = bmeSensor.readHumidity();
+    float pressure = bmeSensor.readPressure();
+
+    bool isDanger = gasSensor.isDanger(analogValue);
+
+    if (isDanger && !dangerNotificationSent) {
+        String message = "Gas value: " + String(analogValue) +
+                         "\nThreshold: " + String(gasSensor.getDangerThreshold()) +
+                         "\nDevice: " + String(DEVICE_ID);
+
+        ntfy.sendNotification(
+            "Dangerous Gas Detected!",
+            message.c_str(),
+            "urgent",
+            "warning"
+        );
+
+        dangerNotificationSent = true;
     }
-  }
 
-  // MQTT reconnect
-  if (!client.connected()) {
-    connectToMQTT();
-  }
-  client.loop();
+    if (!isDanger && dangerNotificationSent) {
+        ntfy.sendNotification(
+            "Air Quality Normal",
+            "Gas level is back below the danger threshold.",
+            "default",
+            "white_check_mark"
+        );
 
-  Serial.print("MQTT state: ");
-Serial.println(client.state());
+        dangerNotificationSent = false;
+    }
 
-  // Read sensors
-  int analogValue = analogRead(MQ2_AO_PIN);
-  int digitalValue = digitalRead(MQ2_DO_PIN);
+    buzzer.handle(isDanger);
 
-  float temperature = bme.readTemperature();
-  float humidity = bme.readHumidity();
-  float pressure = bme.readPressure() / 100.0F;
+    if (millis() - lastTelemetryPublish >= TELEMETRY_INTERVAL) {
+        lastTelemetryPublish = millis();
 
-  bool isDanger = analogValue > dangerThreshold;
+        Serial.println("------------------------------");
+        Serial.print("Gas: ");
+        Serial.println(analogValue);
+        Serial.print("Temp: ");
+        Serial.println(temperature);
+        Serial.print("Humidity: ");
+        Serial.println(humidity);
+        Serial.print("Pressure: ");
+        Serial.println(pressure);
 
-  // Debug logs
-  Serial.println("------------------------------");
-  Serial.print("Gas: "); Serial.println(analogValue);
-  Serial.print("Temp: "); Serial.println(temperature);
-  Serial.print("Humidity: "); Serial.println(humidity);
-  Serial.print("Pressure: "); Serial.println(pressure);
+        String payload = payloadBuilder.buildTelemetryPayload(
+            timeService.getTimestamp(),
+            analogValue,
+            digitalValue,
+            gasSensor.getBaseline(),
+            gasSensor.getDangerThreshold(),
+            temperature,
+            humidity,
+            pressure,
+            isDanger
+        );
 
-  // Handle alarm
-  handleBuzzer(isDanger);
+        Serial.print("Payload length: ");
+        Serial.println(payload.length());
 
-  // Build & send payload
-  String payload = buildPayload(
-    analogValue,
-    digitalValue,
-    temperature,
-    humidity,
-    pressure,
-    isDanger
-  );
+        bool success = mqttService.publish(mqttTopic, payload);
 
-  Serial.print("Payload length: ");
-  Serial.println(payload.length());
+        if (success) {
+            Serial.println("MQTT publish SUCCESS");
+        } else {
+            Serial.println("MQTT publish FAILED");
+        }
+    }
 
-  bool success = client.publish(mqttTopic.c_str(), payload.c_str());
-
-if (success) {
-  Serial.println("MQTT publish SUCCESS");
-} else {
-  Serial.println("MQTT publish FAILED");
+    delay(10);
 }
-
-  delay(1000);
-}
-
