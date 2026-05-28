@@ -81,7 +81,7 @@ If dangerous gas levels exceed a predefined threshold, the system activates a bu
 ## Hardware Wiring
 The diagram below shows how the ESP32 is connected to the MQ-2 gas sensor, BME280 sensor, buzzer, and breadboard.
 
-![ESP32 wiring diagram](docs/images/esp32-wiring-diagram.png)
+![ESP32 wiring diagram](docs/images/AirMonitoring-Esp32-WiringDiagram.png)
 
 ## Development Process
 
