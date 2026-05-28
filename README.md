@@ -83,6 +83,8 @@ The diagram below shows how the ESP32 is connected to the MQ-2 gas sensor, BME28
 
 ![ESP32 wiring diagram](docs/images/AirMonitoring-Esp32-WiringDiagram.png)
 
+![ESP32 setup](docs/images/esp32.png)
+
 ## Development Process
 
 The project was developed as a full-stack IoT system combining embedded programming, backend development, database management, and frontend visualization.
