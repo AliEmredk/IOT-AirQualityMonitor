@@ -93,6 +93,10 @@ The development process included:
 * developing a React dashboard for visualization
 * deploying the frontend and backend using Fly.io
 
+## Future Improvements
+* Implement ntfy notifications for mobile push alerts when dangerous gas levels are detected.
+* Expand alarm handling and notification customization.
+
 ## Summary
 
 This project demonstrates how IoT technologies can be used to create a real-time air monitoring and gas detection system using modern full-stack technologies.
