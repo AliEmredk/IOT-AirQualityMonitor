@@ -3,7 +3,7 @@ import "./App.css";
 import Card from "./components/Card";
 import StatusPanel from "./components/StatusPanel";
 import type { TelemetryReading } from "./types/telemetry";
-import { subscribeToRealtimeTelemetry } from "./api/telemetryApi";
+import { subscribeToRealtimeTelemetry, getLatestTelemetry, getGraphData } from "./api/telemetryApi";
 
 import {
     LineChart,
@@ -22,14 +22,32 @@ const API = import.meta.env.VITE_API_URL;
 export default function App() {
     const [data, setData] = useState<TelemetryReading | null>(null);
     const [history, setHistory] = useState<TelemetryReading[]>([]);
-    const [range, setRange] = useState<"hour" | "day">("hour");
+    const [range] = useState<"hour" | "day">("day");
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const minutesBack = range === "day" ? 1440 : 60;
-        const eventSource = new EventSource(`${API}/api/realtime/sse`);
 
         let isClosed = false;
+
+        async function loadLatestData() {
+            try {
+                const graphData = await getGraphData(DEVICE_ID, range);
+                const latest = await getLatestTelemetry(DEVICE_ID);
+
+                if (!isClosed) {
+                    setHistory(graphData);
+                    setData(latest);
+                    setError(null);
+                }
+            } catch (error) {
+                console.error("Failed to load saved telemetry:", error);
+            }
+        }
+
+        void loadLatestData();
+
+        const eventSource = new EventSource(`${API}/api/realtime/sse`);
 
         eventSource.addEventListener("connected", async (event) => {
             try {
@@ -137,13 +155,7 @@ export default function App() {
                 <div className="chart-header">
                     <h2>Gas Analog History</h2>
 
-                    <select
-                        value={range}
-                        onChange={(e) => setRange(e.target.value as "hour" | "day")}
-                    >
-                        <option value="hour">Last hour</option>
-                        <option value="day">Last 24 hours</option>
-                    </select>
+                    <p className="chart-range-label">Showing last 24 hours</p>
                 </div>
 
                 <ResponsiveContainer width="100%" height={300}>
@@ -195,13 +207,7 @@ export default function App() {
                 <div className="chart-header">
                     <h2>Humidity History</h2>
 
-                    <select
-                        value={range}
-                        onChange={(e) => setRange(e.target.value as "hour" | "day")}
-                    >
-                        <option value="hour">Last hour</option>
-                        <option value="day">Last 24 hours</option>
-                    </select>
+                    <p className="chart-range-label">Showing last 24 hours</p>
                 </div>
 
                 <ResponsiveContainer width="100%" height={300}>
@@ -253,13 +259,7 @@ export default function App() {
                 <div className="chart-header">
                     <h2>Temperature History</h2>
 
-                    <select
-                        value={range}
-                        onChange={(e) => setRange(e.target.value as "hour" | "day")}
-                    >
-                        <option value="hour">Last hour</option>
-                        <option value="day">Last 24 hours</option>
-                    </select>
+                    <p className="chart-range-label">Showing last 24 hours</p>
                 </div>
 
                 <ResponsiveContainer width="100%" height={300}>
@@ -311,13 +311,7 @@ export default function App() {
                 <div className="chart-header">
                     <h2>Pressure History</h2>
 
-                    <select
-                        value={range}
-                        onChange={(e) => setRange(e.target.value as "hour" | "day")}
-                    >
-                        <option value="hour">Last hour</option>
-                        <option value="day">Last 24 hours</option>
-                    </select>
+                    <p className="chart-range-label">Showing last 24 hours</p>
                 </div>
 
                 <ResponsiveContainer width="100%" height={300}>
