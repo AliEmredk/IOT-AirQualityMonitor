@@ -106,7 +106,7 @@ The development process included:
 
 ## Summary
 
-This project demonstrates how IoT technologies can be used to create a real-time air monitoring and gas detection system using modern full-stack technologies.
+This project demonstrates how IoT technologies can be used to create a real-time air monitoring and gas detection system using modern full-stack technologies
 
 Created by ELK:
 * Ali Emre Uzunoglu
